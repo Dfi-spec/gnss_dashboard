@@ -1,222 +1,1313 @@
-# GNSS Jamming Detection Analyzer - local dashboard (Python backend)
+# GNSS Jamming Detection Analyzer
+## System Architecture and Technical Documentation
 
-A mission-control style dashboard that runs on your Windows laptop.
-The page only draws and collects button presses. **The signal, its features and the
-classification are computed by a local Python (Flask) server that runs your saved
-Random Forest (`signal_model.joblib`).**
+**Project:** GNSS Jamming Detection Analyzer  
+**Application type:** Local simulation and signal-analysis dashboard  
+**Frontend:** HTML, CSS, JavaScript  
+**Backend:** Python, Flask  
+**Machine Learning:** Scikit-learn Random Forest  
+**Signal Processing:** NumPy and SciPy  
+**Deployment:** Local Windows computer  
+**Operating mode:** Synthetic data simulation
 
-> **Simulated data only.** Every signal and every satellite reading is synthetic. The dashboard is
-> not connected to a GNSS receiver and has **not been validated as a real-world GNSS jamming detector.**
+---
 
----------------------------------------------------------------------
+# Table of Contents
 
-## 1. Folder structure
+1. Project Overview
+2. Objectives and Scope
+3. System Requirements
+4. System Architecture
+5. Architecture Layers
+6. Project Directory Structure
+7. Component Descriptions
+8. End-to-End Data Flow
+9. Signal Generation and Processing
+10. Feature Extraction
+11. Jamming Classification
+12. Simulated GNSS Link Model
+13. Modulation Classification
+14. Audio Alert System
+15. API Architecture
+16. Frontend Dashboard
+17. Machine Learning Artifacts
+18. Installation and Execution
+19. Testing and Validation
+20. Performance Evaluation
+21. Security and Reliability
+22. Limitations
+23. Future Enhancements
+24. Glossary
+25. Conclusion
 
+---
+
+# 1. Project Overview
+
+The GNSS Jamming Detection Analyzer is a locally hosted software application that demonstrates the analysis and classification of synthetic radio signals.
+
+The application provides a mission-control-style dashboard where users can manipulate simulated signal parameters, inspect frequency-domain visualizations, observe machine-learning predictions, monitor an illustrative GNSS link, and identify simulated modulation types.
+
+The application combines:
+
+- A browser-based dashboard.
+- A Python Flask backend.
+- Synthetic signal generation.
+- Digital signal-processing techniques.
+- Two independent Random Forest classifiers.
+- A simulated GNSS link model.
+- An optional browser audio-alert system.
+- Automated software tests.
+
+The browser is responsible for presenting information and collecting user interactions. The Python backend performs the signal-processing and classification operations.
+
+The project operates locally and is designed primarily for demonstration, learning, and experimentation.
+
+> **Important limitation:** All signals, satellite readings, and link measurements in this project are simulated. The system is not connected to a physical GNSS receiver and has not been validated as a real-world GNSS jamming detector.
+
+## 1.1 Main Functional Modules
+
+The application contains three primary analysis modules.
+
+### Module A: Jamming Signal Analyzer
+
+Generates synthetic signals and classifies them into three trained categories:
+
+- Normal Tone
+- Wideband Noise
+- Frequency Sweep
+
+The application extracts signal features and passes them to a saved Random Forest model.
+
+A configurable confidence threshold can cause the system to return `UNKNOWN` when the maximum predicted class probability is too low.
+
+### Module B: Simulated GNSS Link Monitor
+
+Calculates illustrative satellite counts, signal strength, and link status using a simplified simulation.
+
+This module demonstrates how interference scenarios might be represented visually in a monitoring interface.
+
+Its outputs are simulated values, not actual GNSS receiver measurements.
+
+### Module C: Modulation Classifier
+
+Uses a separate machine-learning model to classify six simulated modulation types:
+
+**Analog modulation**
+- AM — Amplitude Modulation
+- FM — Frequency Modulation
+
+**Digital modulation**
+- ASK — Amplitude Shift Keying
+- FSK — Frequency Shift Keying
+- BPSK — Binary Phase Shift Keying
+- QPSK — Quadrature Phase Shift Keying
+
+The modulation classifier has its own training dataset, model artifact, and evaluation metrics.
+
+---
+
+# 2. Objectives and Scope
+
+## 2.1 Project Objectives
+
+1. Demonstrate synthetic radio-signal generation.
+2. Visualize signals in the time and frequency domains.
+3. Extract meaningful numerical signal features.
+4. Apply a trained Random Forest classifier.
+5. Demonstrate confidence-based rejection through an `UNKNOWN` state.
+6. Simulate changes in GNSS link conditions.
+7. Recognize selected analog and digital modulation categories.
+8. Provide audio alerts for selected simulated events.
+9. Build an interactive, locally hosted dashboard.
+10. Validate important application behaviors through automated tests.
+
+## 2.2 Scope
+
+The application is a software simulation.
+
+It does not currently demonstrate verified detection of actual GNSS interference, spoofing, or satellite-navigation failure.
+
+Its reported accuracy values describe performance on synthetic datasets and must not be interpreted as real-world detection accuracy.
+
+---
+
+# 3. System Requirements
+
+## 3.1 Software Requirements
+
+| Component | Requirement |
+|---|---|
+| Operating system | Windows 10 or Windows 11 |
+| Python | Python 3.13, as specified by the project |
+| Backend framework | Flask |
+| Numerical processing | NumPy |
+| Signal processing | SciPy |
+| Machine learning | Scikit-learn |
+| Model serialization | Joblib |
+| Optional plotting utility | Matplotlib |
+| Browser | Chrome or Microsoft Edge |
+| Optional browser testing | Playwright |
+| Optional alert-logic testing | Node.js |
+
+The project includes a `requirements.txt` file with pinned dependency versions. Use those versions when setting up the environment.
+
+## 3.2 Runtime Environment
+
+The intended local address is:
+
+`http://127.0.0.1:5000`
+
+The application can use a different port through the `GNSS_PORT` environment variable.
+
+The local Flask server is intended to listen on the loopback interface rather than expose itself to the public internet.
+
+---
+
+# 4. System Architecture
+
+## 4.1 High-Level Architecture Diagram
+
+The following diagram illustrates the main system components, their relationships, and the direction of information flow.
+
+```mermaid
+flowchart TB
+
+    USER["User"]
+
+    subgraph PRESENTATION["Presentation Layer"]
+        UI["Browser Dashboard<br/>static/index.html"]
+        CONTROLS["Interactive Controls<br/>Simulator · Analyzer · Modulation"]
+        VIS["Visualizations<br/>Spectrum · Features · Predictions"]
+        AUDIO["Audio Alert Interface<br/>static/alerts.js"]
+    end
+
+    subgraph APPLICATION["Application Layer"]
+        API["Flask Backend<br/>server.py"]
+        STATUS["Status and Model Information"]
+        ROUTER["API Request Routing"]
+    end
+
+    subgraph ANALYSIS["Signal Analysis Layer"]
+        SIGNAL["Synthetic Signal Generator<br/>signal_engine.py"]
+        FEATURES["Feature Extraction<br/>ml_model.py"]
+        LINK["GNSS Link Simulation<br/>link_model.py"]
+        MOD["Modulation Engine<br/>modulation_engine.py"]
+    end
+
+    subgraph ML["Machine Learning Layer"]
+        JAMMODEL[("Jamming Model<br/>signal_model.joblib")]
+        MODMODEL[("Modulation Model<br/>modulation_model.joblib")]
+    end
+
+    subgraph ARTIFACTS["Data and Model Artifacts"]
+        JAMDATA[("signal_dataset.csv")]
+        MODDATA[("modulation_dataset.csv")]
+        METRICS[("modulation_metrics.json")]
+    end
+
+    subgraph QUALITY["Validation Layer"]
+        SELFTEST["tests/selftest.py"]
+        ALERTTEST["Alert Logic Tests"]
+        BROWSERTEST["Optional Browser Tests"]
+    end
+
+    USER --> UI
+    UI --> CONTROLS
+    CONTROLS -->|"Local HTTP requests"| API
+
+    API --> ROUTER
+    ROUTER --> SIGNAL
+    ROUTER --> LINK
+    ROUTER --> MOD
+    ROUTER --> STATUS
+
+    SIGNAL --> FEATURES
+    FEATURES --> JAMMODEL
+    MOD --> MODMODEL
+
+    JAMDATA -.->|"Training and evaluation"| JAMMODEL
+    MODDATA -.->|"Training and evaluation"| MODMODEL
+    METRICS -.-> STATUS
+
+    JAMMODEL --> API
+    LINK --> API
+    MODMODEL --> API
+
+    API -->|"JSON responses"| VIS
+    VIS --> UI
+    UI --> AUDIO
+    UI --> USER
+
+    SELFTEST -.-> API
+    ALERTTEST -.-> AUDIO
+    BROWSERTEST -.-> UI
 ```
-gnss_dashboard\
-|-- run_dashboard.bat          <- double-click to start (does the setup on first run)
-|-- run_selftest.bat           <- checks that the backend really uses your model
-|-- run_signal_simulator.bat   <- runs your original signal_simulator.py (graphs)
-|-- retrain_model.bat          <- re-runs your ml_model.py (only if the model fails to load)
-|-- retrain_modulation.bat     <- NEW: rebuilds the modulation classifier (dataset, model, metrics)
-|-- setup_env.bat              <- creates .venv and installs packages (called by the others)
-|-- requirements.txt           <- exact package versions
-|-- server.py                  <- Flask backend + API (now also /api/link and /api/mod/*)
-|-- signal_engine.py           <- signal generator + model wrapper (uses ml_model.py)
-|-- link_model.py              <- NEW: simulated GNSS link (satellites, strength, C/N0, status)
-|-- modulation_engine.py       <- NEW: AM/FM/ASK/FSK/BPSK/QPSK signals, features, classifier wrapper
-|-- train_modulation.py        <- NEW: builds the modulation dataset, trains and tests the model
-|-- modulation_model.joblib    <- NEW: trained modulation Random Forest
-|-- modulation_dataset.csv     <- NEW: its dataset (train + held-out test rows, synthetic)
-|-- modulation_metrics.json    <- NEW: its measured accuracy, confusion matrix, unseen-signal results
-|-- static\
-|   |-- index.html             <- the dashboard page (your design, plus the new parts)
-|   |-- alerts.js              <- NEW: audio alert logic and sound engine
-|   `-- audio\
-|       `-- jammer_alert.mp3   <- NEW: the jammer alert sound (your MP3)
-|-- tests\
-|   |-- selftest.py            <- run by run_selftest.bat
-|   |-- test_alert_gate.js     <- NEW: duplicate-alert tests (run automatically if Node.js is installed)
-|   `-- browser_test.py        <- NEW, optional: clicks the real page (needs Playwright)
-|-- ml_model.py                <- YOUR file, unchanged
-|-- signal_model.joblib        <- YOUR trained Random Forest, unchanged
-|-- signal_dataset.csv         <- YOUR dataset, unchanged
-|-- signal_simulator.py        <- YOUR file, unchanged
-`-- app.py                     <- YOUR Streamlit app, unchanged (not used by this dashboard)
-```
 
-## 2. Requirements
+## 4.2 Architecture Explanation
 
-- Windows 10 or 11
-- Python 3.13 from https://www.python.org/downloads/ (tick **Add python.exe to PATH**)
-- Internet on the first run (to install packages, and for the Google Fonts the design uses)
+### Presentation Layer
 
-Packages (installed automatically into `.venv`, versions pinned in `requirements.txt`):
+The browser presents the dashboard and accepts user interactions.
 
-| Package | Version | Used for |
+It displays the generated signal, spectrum, classification, feature values, link status, modulation results, and alert controls.
+
+### Application Layer
+
+The Flask backend receives HTTP requests, selects the appropriate processing component, and returns results in JSON format.
+
+### Signal Analysis Layer
+
+The signal-processing components generate synthetic samples, extract features, calculate simulated link conditions, and prepare inputs for machine-learning inference.
+
+### Machine Learning Layer
+
+Two independent saved Random Forest models are used:
+
+- `signal_model.joblib`
+- `modulation_model.joblib`
+
+The first model performs the documented jamming-demo classification. The second performs modulation classification.
+
+### Data and Artifact Layer
+
+CSV datasets support model training and evaluation. The modulation metrics JSON file stores evaluation information.
+
+### Validation Layer
+
+Automated tests check important application behavior, including model loading, simulated link calculations, classification behavior, and audio-alert logic.
+
+---
+
+# 5. Architecture Layers
+
+| Layer | Main responsibility | Main components |
 |---|---|---|
-| Flask | 3.1.3 | local web server |
-| numpy | 2.5.4 | signals |
-| scipy | 1.18.1 | FFT |
-| scikit-learn | 1.9.1 | loads and runs your Random Forest (1.9.1 is the version that saved your model) |
-| joblib | 1.6.0 | loads `signal_model.joblib` |
-| matplotlib | 3.11.2 | only for your `signal_simulator.py` |
+| User interface | Display data and collect controls | HTML, CSS, JavaScript |
+| HTTP communication | Exchange requests and responses | Local HTTP, JSON |
+| Backend application | Route requests and coordinate operations | `server.py` |
+| Signal processing | Generate and analyze signals | NumPy, SciPy, signal engine |
+| Jamming inference | Classify synthetic signal features | Scikit-learn, jamming model |
+| Link simulation | Calculate illustrative link status | `link_model.py` |
+| Modulation inference | Recognize simulated modulation types | Modulation engine and model |
+| Alert handling | Manage optional audio notifications | `alerts.js` |
+| Validation | Test components and expected behavior | Python tests and optional browser tests |
 
-## 3. Run it (copy and paste into CMD)
+---
 
-Easiest: double-click `run_dashboard.bat`.
+# 6. Project Directory Structure
 
-Or from CMD (change the path to where you unzipped the folder):
+The following structure is documented for the supplied project.
+
+```text
+gnss_dashboard/
+│
+├── run_dashboard.bat
+├── run_selftest.bat
+├── run_signal_simulator.bat
+├── retrain_model.bat
+├── retrain_modulation.bat
+├── setup_env.bat
+├── requirements.txt
+│
+├── server.py
+├── signal_engine.py
+├── link_model.py
+├── modulation_engine.py
+├── train_modulation.py
+│
+├── ml_model.py
+├── signal_model.joblib
+├── signal_dataset.csv
+├── signal_simulator.py
+│
+├── modulation_model.joblib
+├── modulation_dataset.csv
+├── modulation_metrics.json
+│
+├── static/
+│   ├── index.html
+│   ├── alerts.js
+│   └── audio/
+│       └── jammer_alert.mp3
+│
+├── tests/
+│   ├── selftest.py
+│   ├── test_alert_gate.js
+│   └── browser_test.py
+│
+└── app.py
+```
+
+## 6.1 Important Files
+
+| File | Purpose |
+|---|---|
+| `server.py` | Main Flask backend and API routes |
+| `signal_engine.py` | Synthetic signal generation and jamming-analysis coordination |
+| `ml_model.py` | Jamming-model feature extraction and classification functions |
+| `signal_model.joblib` | Saved jamming-demo Random Forest |
+| `link_model.py` | Simulated GNSS link calculations |
+| `modulation_engine.py` | Synthetic modulation generation and classifier wrapper |
+| `train_modulation.py` | Generates training data and trains/evaluates the modulation model |
+| `modulation_model.joblib` | Saved modulation classifier |
+| `modulation_dataset.csv` | Synthetic modulation dataset |
+| `modulation_metrics.json` | Modulation evaluation results |
+| `static/index.html` | Browser dashboard |
+| `static/alerts.js` | Audio playback and duplicate-alert prevention |
+| `tests/selftest.py` | Main automated validation script |
+| `app.py` | Existing Streamlit application, documented as separate from the main dashboard |
+
+---
+
+# 7. Component Descriptions
+
+## 7.1 Flask Backend
+
+**File:** `server.py`
+
+The Flask backend is the central application component.
+
+Responsibilities include:
+
+- Serving the dashboard.
+- Receiving HTTP requests.
+- Validating and processing request parameters.
+- Calling signal-processing engines.
+- Invoking the saved machine-learning models through their wrappers.
+- Returning JSON responses.
+- Providing model and application status information.
+
+The documented routes include `/api/status`, `/api/step`, `/api/classify`, `/api/link`, and modulation-related routes under `/api/mod/*`.
+
+The exact HTTP methods and schemas for the link and modulation routes must be confirmed in the actual implementation.
+
+## 7.2 Signal Engine
+
+**File:** `signal_engine.py`
+
+The signal engine coordinates synthetic signal generation and jamming analysis.
+
+It receives configuration values such as signal type, variation or seed, and additional noise.
+
+It then prepares signal samples and coordinates feature extraction and classification.
+
+## 7.3 Feature Extraction
+
+**File:** `ml_model.py`
+
+The feature-extraction functions transform generated samples into a numerical feature vector.
+
+The documented feature vector contains:
+
+1. Peak frequency
+2. Bandwidth
+3. Spectral flatness
+4. RMS amplitude
+
+These features are passed to the saved jamming model.
+
+## 7.4 GNSS Link Model
+
+**File:** `link_model.py`
+
+This component simulates the effect of signal scenarios on illustrative link indicators.
+
+Its documented responsibilities include calculating satellite count, signal strength, C/N0-like values, and status.
+
+It does not measure a physical GNSS link.
+
+## 7.5 Modulation Engine
+
+**File:** `modulation_engine.py`
+
+This module provides the separate modulation-classification workflow.
+
+It supports synthetic AM, FM, ASK, FSK, BPSK, and QPSK examples and uses a separate saved model.
+
+## 7.6 Audio Alert Engine
+
+**File:** `static/alerts.js`
+
+This browser-side component manages optional alert playback.
+
+It handles event qualification, duplicate prevention, cooldown behavior, alert priority, and sound playback.
+
+The browser requires an initial user gesture before audio playback is permitted.
+
+---
+
+# 8. End-to-End Data Flow
+
+## 8.1 Jamming Analysis
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as Browser Dashboard
+    participant API as Flask Backend
+    participant SE as Signal Engine
+    participant FE as Feature Extraction
+    participant ML as Random Forest Model
+
+    User->>UI: Select signal settings
+    UI->>API: POST /api/step
+    API->>SE: Generate synthetic signal
+    SE->>FE: Extract numerical features
+    FE->>ML: Predict class probabilities
+    ML-->>FE: Class probabilities
+    FE-->>SE: Features and classification
+    SE-->>API: Analysis result
+    API-->>UI: JSON response
+    UI->>UI: Update visualizations and status
+```
+
+### Step-by-step explanation
+
+1. The user chooses a signal type and configuration.
+2. The browser sends the settings to the Flask backend.
+3. The backend generates the corresponding synthetic signal.
+4. The signal is processed to extract the configured features.
+5. The saved Random Forest predicts the class probabilities.
+6. A confidence threshold determines whether the prediction is accepted or rejected as `UNKNOWN`.
+7. The backend returns the analysis result.
+8. The dashboard updates its visualizations and status indicators.
+
+The display can use recent frames for smoothing, while the alert system uses an instantaneous decision.
+
+## 8.2 Simulated Link Flow
+
+1. The user changes the simulated link controls or signal scenario.
+2. The backend receives the updated state.
+3. `link_model.py` calculates illustrative link indicators.
+4. The backend returns the resulting values.
+5. The dashboard updates the simulated GNSS link panel.
+
+The link calculation is rule-based and illustrative. It is not a trained-model prediction.
+
+## 8.3 Modulation Classification Flow
+
+1. The user selects a modulation scenario and its parameters.
+2. The frontend sends the request to the backend.
+3. The modulation engine generates a synthetic signal.
+4. The model receives the required extracted features.
+5. The modulation Random Forest predicts one of its trained classes, subject to the rejection rule.
+6. The frontend displays the result.
+
+---
+
+# 9. Signal Generation and Processing
+
+## 9.1 Signal Types
+
+The jamming-demo analyzer documents four selectable scenarios:
+
+| Scenario | Purpose |
+|---|---|
+| Normal Tone | Represents the configured normal class |
+| Wideband Noise | Represents a simulated noise-like interference class |
+| Frequency Sweep | Represents a simulated frequency-varying interference class |
+| Unfamiliar Test Signal | Demonstrates confidence-based rejection behavior |
+
+The first three are the documented trained categories. The unfamiliar test signal is an input scenario, not a fourth documented trained class.
+
+## 9.2 Signal Parameters
+
+The documented simulator controls include:
+
+- Signal type.
+- Variation or seed.
+- Additional noise level.
+- Running/stopped state.
+
+These parameters control the synthetic signal rather than an actual transmitted or received RF signal.
+
+## 9.3 Frequency-Domain Analysis
+
+The dashboard can present a spectrum and related visual indicators.
+
+Frequency-domain analysis allows the generated signal's energy distribution to be inspected.
+
+A Fast Fourier Transform (FFT) is a standard method for converting a sampled signal into a frequency-domain representation.
+
+The project's exact FFT normalization, windowing, and bandwidth calculation should be confirmed in the signal-processing implementation before being documented as specific mathematical procedures.
+
+---
+
+# 10. Feature Extraction
+
+The jamming classifier uses four documented features.
+
+## 10.1 Peak Frequency
+
+Peak frequency identifies the frequency associated with the largest relevant spectral component under the implementation's calculation.
+
+It can help distinguish a tone-like signal from signals whose spectral energy is distributed more broadly.
+
+## 10.2 Bandwidth
+
+Bandwidth represents the frequency range occupied by a signal according to the project's chosen calculation.
+
+The exact definition depends on the implementation, such as the threshold or power criterion used to determine the occupied frequency range.
+
+## 10.3 Spectral Flatness
+
+Spectral flatness compares the geometric mean of spectral power with its arithmetic mean.
+
+A commonly used expression is:
+
+\[
+SF =
+\frac{
+\left(\prod_{k=1}^{N}P_k\right)^{1/N}
+}{
+\frac{1}{N}\sum_{k=1}^{N}P_k
+}
+\]
+
+where:
+
+- \(P_k\) is the spectral power at frequency bin \(k\).
+- \(N\) is the number of included bins.
+
+A value closer to one generally indicates a flatter spectrum, while a smaller value indicates that spectral energy is more concentrated.
+
+The exact implementation may require handling zero-power bins and selecting the appropriate spectral range.
+
+## 10.4 RMS Amplitude
+
+Root mean square amplitude is defined as:
+
+\[
+x_{\mathrm{RMS}} =
+\sqrt{\frac{1}{N}\sum_{n=1}^{N}x_n^2}
+\]
+
+where \(x_n\) represents a signal sample.
+
+RMS measures signal magnitude over the selected sample window.
+
+## 10.5 Feature Vector
+
+The documented feature ordering is:
+
+```text
+[
+    peak_frequency,
+    bandwidth,
+    spectral_flatness,
+    RMS
+]
+```
+
+The ordering must remain consistent between feature extraction, training, and inference.
+
+---
+
+# 11. Jamming Classification
+
+## 11.1 Model
+
+The saved model is:
+
+`signal_model.joblib`
+
+The documented model is a Random Forest classifier implemented using scikit-learn.
+
+A Random Forest combines the predictions of multiple decision trees to produce a classification.
+
+## 11.2 Trained Classes
+
+The three documented trained classes are:
+
+- Normal Tone
+- Wideband Noise
+- Frequency Sweep
+
+The application treats Normal Tone as the normal class and the other two classes as simulated jammer categories.
+
+This is a project-specific labeling choice.
+
+## 11.3 Prediction and Confidence Threshold
+
+The classifier returns class probabilities through its prediction interface.
+
+Let the predicted class probabilities be:
+
+\[
+p_1,p_2,\ldots,p_C
+\]
+
+The maximum class probability is:
+
+\[
+p_{\max}=\max_i p_i
+\]
+
+The application compares this value with a configured threshold.
+
+Conceptually:
+
+```text
+if maximum_probability < threshold:
+    prediction = UNKNOWN
+else:
+    prediction = highest_probability_class
+```
+
+The actual implementation should be checked for its exact comparison and response behavior.
+
+## 11.4 Important Interpretation
+
+`UNKNOWN` means that the selected confidence rule rejected the prediction.
+
+It does not prove that the signal is new, malicious, or outside the training distribution.
+
+An unfamiliar signal can still receive a high model probability, and a known signal can be rejected when its probability is low.
+
+## 11.5 Display Smoothing
+
+The dashboard smooths classification across the last four frames.
+
+This can reduce rapid visual changes, but it introduces a delay before the displayed label settles after a signal change.
+
+The alert system instead uses an instantaneous decision from the backend.
+
+Consequently, an alert can trigger before the visible classification badge settles.
+
+---
+
+# 12. Simulated GNSS Link Model
+
+## 12.1 Purpose
+
+The GNSS link panel illustrates how simulated interference conditions might correspond to changes in satellite visibility and signal strength.
+
+It is not connected to a GNSS receiver.
+
+## 12.2 Inputs
+
+The documented simulation uses state such as:
+
+- Simulator running or stopped.
+- Selected signal type.
+- Additional noise.
+- Simulated satellite count.
+- Simulated signal strength.
+
+## 12.3 Outputs
+
+The panel can display illustrative values for:
+
+- Satellite count.
+- Signal strength.
+- C/N0-like indicator.
+- Link status.
+
+The precise formulas for all link values should be verified in `link_model.py`.
+
+## 12.4 Documented Status Rules
+
+| Condition | Status |
+|---|---|
+| Satellite count at or below 4, or signal strength below 25% | DEGRADED |
+| Satellite count at or below 7, or signal strength below 50%, unless the degraded rule applies | CAUTION |
+| Neither condition applies | Normal/healthy state according to the implementation |
+
+The degraded condition takes precedence over caution.
+
+These thresholds are illustrative settings for the software demonstration. They are not validated operational GNSS thresholds.
+
+## 12.5 No-Signal State
+
+When the simulator is stopped, the documented behavior displays `NO SIGNAL`.
+
+This indicates the state of the synthetic simulation, not loss of a real satellite-navigation signal.
+
+---
+
+# 13. Modulation Classification
+
+## 13.1 Overview
+
+The modulation classifier is a separate analysis unit with its own model, dataset, and metrics.
+
+It must not be confused with the jamming classifier.
+
+## 13.2 Supported Classes
+
+| Category | Modulation | Full name |
+|---|---|---|
+| Analog | AM | Amplitude Modulation |
+| Analog | FM | Frequency Modulation |
+| Digital | ASK | Amplitude Shift Keying |
+| Digital | FSK | Frequency Shift Keying |
+| Digital | BPSK | Binary Phase Shift Keying |
+| Digital | QPSK | Quadrature Phase Shift Keying |
+
+## 13.3 Main Components
+
+| File | Responsibility |
+|---|---|
+| `modulation_engine.py` | Generates and processes modulation scenarios |
+| `train_modulation.py` | Creates synthetic data, trains the classifier, and evaluates it |
+| `modulation_model.joblib` | Stores the trained model |
+| `modulation_dataset.csv` | Stores synthetic dataset records |
+| `modulation_metrics.json` | Stores reported evaluation metrics |
+| `retrain_modulation.bat` | Rebuilds modulation-related artifacts |
+
+## 13.4 Model Evaluation
+
+The supplied project specification reports 99.7% held-out accuracy on simulated modulation frames over an SNR range of 0–30 dB.
+
+This figure applies to the documented synthetic test data and does not establish real-world modulation-recognition accuracy.
+
+## 13.5 Known Limitations
+
+- At 0 dB SNR, a single frame is often classified as `UNKNOWN`.
+- A simulated 16-QAM signal is mostly rejected but can sometimes be labeled QPSK.
+- A chirp can be labeled FM because a chirp is a form of linear frequency modulation.
+- An unseen source is not guaranteed to be rejected by the confidence threshold.
+
+---
+
+# 14. Audio Alert System
+
+## 14.1 Components
+
+The alert system uses:
+
+- `static/alerts.js`
+- `static/audio/jammer_alert.mp3`
+
+Audio is optional and remains off until the user enables it.
+
+## 14.2 Supported Alert Events
+
+- JAMMER
+- UNKNOWN SIGNAL
+- LINK DEGRADED
+
+The documented alert system applies these events to the jamming analyzer and simulated link, rather than the separate modulation unit.
+
+## 14.3 Alert Controls
+
+| Control | Purpose |
+|---|---|
+| SOUND | Enables or disables audio alerts |
+| MUTE | Silences audio, including a sound already playing |
+| TEST | Tests audio playback |
+| VOL | Adjusts volume |
+
+## 14.4 Documented Alert Gating
+
+| Event | Qualification rule |
+|---|---|
+| JAMMER | One qualifying frame |
+| UNKNOWN SIGNAL | Two qualifying frames |
+| LINK DEGRADED | Five qualifying frames |
+
+Additional documented behavior:
+
+- An alert re-arms after three normal frames.
+- Each alert type has an eight-second cooldown.
+- Priority is JAMMER, then UNKNOWN, then LINK DEGRADED.
+- Two sounds must not overlap.
+- No new alerts are generated while the analyzer is frozen or powered off.
+- Audio playback requires a user gesture in the browser.
+
+The jammer alert uses the supplied MP3. If that file is missing, fallback beeps are used.
+
+---
+
+# 15. API Architecture
+
+All documented endpoints are intended for local application use.
+
+## 15.1 Endpoint Summary
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/status` | GET | Returns model facts, classes, dataset facts, and hold-out information |
+| `/api/step` | POST | Generates and analyzes a synthetic signal frame |
+| `/api/classify` | POST | Classifies a supplied feature vector |
+| `/api/link` | Verify in source | Link-simulation endpoint |
+| `/api/mod/*` | Verify in source | Modulation-related API endpoints |
+
+The exact method and request/response schema of the link and modulation routes must be verified in `server.py`.
+
+## 15.2 Example: Signal Step Request
+
+```json
+{
+  "type": 0,
+  "seed": 1,
+  "extra": 0,
+  "threshold": 0.8,
+  "history": []
+}
+```
+
+Documented fields:
+
+| Field | Meaning |
+|---|---|
+| `type` | Signal type identifier, documented range 0–3 |
+| `seed` | Variation/seed value, documented range 1–100 |
+| `extra` | Additional noise level, documented range 0–100 |
+| `threshold` | Confidence threshold, documented range 0.5–0.95 |
+| `history` | Recent history used for display smoothing |
+
+The exact mapping between numeric type identifiers and displayed signal names must be confirmed in the code.
+
+## 15.3 Example: Feature Classification Request
+
+```json
+{
+  "features": [50.0, 0.0, 0.0, 0.7],
+  "threshold": 0.8
+}
+```
+
+The feature array follows the documented order:
+
+1. Peak frequency
+2. Bandwidth
+3. Spectral flatness
+4. RMS amplitude
+
+The numbers are illustrative request values, not validated RF measurements.
+
+## 15.4 Typical Response Flow
+
+```mermaid
+flowchart LR
+    A["Browser Request"] --> B["Flask Route"]
+    B --> C["Validate Parameters"]
+    C --> D["Call Analysis Engine"]
+    D --> E["Generate / Analyze"]
+    E --> F["Build JSON Result"]
+    F --> G["Return HTTP Response"]
+    G --> H["Update Dashboard"]
+```
+
+The precise response schema should be confirmed from the current backend implementation.
+
+---
+
+# 16. Frontend Dashboard
+
+## 16.1 Responsibilities
+
+The browser dashboard:
+
+- Displays the simulator and analysis panels.
+- Collects user control changes.
+- Sends requests to the local backend.
+- Renders returned signal samples and spectra.
+- Displays feature values and class probabilities.
+- Updates simulated GNSS link status.
+- Displays modulation classification results.
+- Manages optional audio-alert interaction.
+- Supports the documented freeze, power, reference, and visualization controls.
+
+The frontend is a presentation and interaction layer. The primary signal classification is computed by the Python backend.
+
+## 16.2 Analyzer Controls
+
+| Control | Documented behavior |
+|---|---|
+| Knob | Adjusts the `UNKNOWN` confidence threshold |
+| FRZ | Freezes the display; a threshold change can re-judge the frozen frame |
+| REF / CLR | Stores or clears a reference spectrum |
+| LOG | Switches spectrum scale |
+| GRID | Toggles the grid |
+| WTR | Toggles the spectrogram |
+| PEAK | Marks peak frequency |
+| BAND | Marks measured bandwidth |
+| AVG | Averages the displayed spectrum |
+| Arrow keys | Adjust simulated link values |
+| POWER | Switches the analyzer display on or off |
+
+The average-spectrum display is documented as a visualization feature. Classification uses the raw frame.
+
+## 16.3 Simulator Controls
+
+| Control | Documented behavior |
+|---|---|
+| SELECT | Moves the active selection |
+| UP / DOWN | Changes the selected simulator setting |
+| ENTER | Starts or stops the simulated output |
+| RF OUT | Indicates simulated output running |
+| INTERFERENCE OUT | Indicates selected simulated noise or sweep scenarios |
+
+These controls do not operate physical RF hardware.
+
+---
+
+# 17. Machine Learning Artifacts
+
+## 17.1 Jamming Artifacts
+
+| Artifact | Purpose |
+|---|---|
+| `signal_model.joblib` | Saved Random Forest model |
+| `signal_dataset.csv` | Synthetic jamming-demo dataset |
+| `ml_model.py` | Feature extraction and classification logic |
+| `retrain_model.bat` | Retraining entry point if required |
+
+The original model and dataset are documented as unchanged in the supplied project specification.
+
+## 17.2 Modulation Artifacts
+
+| Artifact | Purpose |
+|---|---|
+| `modulation_model.joblib` | Saved modulation classifier |
+| `modulation_dataset.csv` | Synthetic modulation data |
+| `modulation_metrics.json` | Evaluation metrics |
+| `train_modulation.py` | Dataset generation and model training |
+| `retrain_modulation.bat` | Retraining entry point |
+
+The modulation model is independent of the jamming model.
+
+## 17.3 Model Version Compatibility
+
+Scikit-learn model artifacts can be sensitive to library versions.
+
+The project pins dependency versions in `requirements.txt` and documents rebuilding the modulation model when a saved artifact is incompatible with the installed scikit-learn version.
+
+Use the documented setup scripts rather than upgrading dependencies arbitrarily.
+
+---
+
+# 18. Installation and Execution
+
+## 18.1 Recommended Startup
+
+1. Extract the project folder into a writable directory.
+2. Install Python 3.13 if it is not already installed.
+3. Ensure Python is accessible from the Windows command line.
+4. Open the project folder.
+5. Double-click `run_dashboard.bat`.
+6. Allow the first-run environment setup and package installation to complete.
+7. Open `http://127.0.0.1:5000` if the browser does not open automatically.
+8. Run the self-test script and verify that the required checks pass.
+
+The first run requires an internet connection to install dependencies. The design also uses Google Fonts when online.
+
+## 18.2 Command-Line Startup
+
+From Command Prompt:
 
 ```bat
 cd /d C:\Users\YourName\Downloads\gnss_dashboard
 run_dashboard.bat
 ```
 
-The first run creates `.venv` and installs the packages (a few minutes). Then your browser opens
-http://127.0.0.1:5000. Close the CMD window (or press Ctrl+C) to stop.
+Replace the example directory with the actual extracted project path.
 
-Manual version, without the .bat files:
+## 18.3 Manual Setup
 
 ```bat
 cd /d C:\Users\YourName\Downloads\gnss_dashboard
+
 py -3.13 -m venv .venv
+
 .venv\Scripts\activate
+
 python -m pip install -r requirements.txt
+
 python tests\selftest.py
+
 python server.py
 ```
 
-Then open http://127.0.0.1:5000 in Chrome or Edge.
+The commands assume the documented folder structure and a working Python 3.13 installation.
 
-Check the setup: `run_selftest.bat` (or `python tests\selftest.py`). It must end with `ALL CHECKS PASSED`.
+## 18.4 Alternative Port
 
-Different port: `set GNSS_PORT=5001` before `run_dashboard.bat`.
+If port 5000 is already in use:
 
-## 4. What every control does
-
-**Simulator (right unit)** - makes the simulated input
-| Control | Action |
-|---|---|
-| SELECT | moves the `>` marker: Signal Type, Variation, Extra noise |
-| UP / DOWN (hold to repeat) | changes the selected setting. Signal Type: Normal Tone, Wideband Noise, Frequency Sweep, Unfamiliar Test Signal. Variation: 1-100 (fixes frequency/strength of the signal). Extra noise: 0-100 % |
-| ENTER | starts / stops the output (Status: Running / Stopped). Stopped shows NO INPUT |
-| RF OUT / INTERFERENCE OUT jacks | RF OUT lights while running; INTERFERENCE OUT lights red for the noise and sweep signals |
-
-**Analyzer (left unit)**
-| Control | Action |
-|---|---|
-| Knob (drag, mouse wheel, or arrow keys) | UNKNOWN limit, 50-95 %. Below it the answer is UNKNOWN. Sent to the server with every request |
-| FRZ | freezes the screen. Moving the knob while frozen re-judges the frozen frame through `/api/classify` |
-| REF / CLR | stores / clears a reference spectrum (dashed line) |
-| LOG | spectrum in dB or linear |
-| GRID | grid on or off |
-| WTR | spectrogram on or off |
-| PEAK | marks the peak frequency |
-| BAND | marks the measured bandwidth |
-| AVG | averages the displayed spectrum (display only; classification uses the raw frame) |
-| Left / Right arrows | simulated satellites 0-20 |
-| Up / Down arrows | simulated signal strength 0-100 % |
-| ENTER (nav pad) | resets the simulated link to 12 satellites, 78 % |
-| POWER | screen on / off (no requests while off) |
-
-The **GNSS LINK (SIMULATED)** panel uses the same simple rule as your `app.py`
-(satellites <= 4 or strength < 25 = DEGRADED, <= 7 or < 50 = CAUTION). It is a slider-driven indicator, not
-a model output and not a measurement.
-
-## 5. How the classification is made
-
-```
-browser (static/index.html)
-   |  POST /api/step  {type, seed, extra, threshold, history}
-   v
-server.py
-   |-- signal_engine.generate_signal()      synthetic signal (same recipes as your app.py / ml_model.py)
-   |-- ml_model.extract_features()          peak frequency, bandwidth, spectral flatness, RMS
-   |-- ml_model.classify_signal()           -> signal_model.joblib  (predict_proba)
-   |-- smoothing over the last 4 frames + UNKNOWN rule (top probability < threshold)
-   v
-JSON {samples, spectrum, features, probabilities, prediction, status}
-   v
-browser only draws it
+```bat
+set GNSS_PORT=5001
+run_dashboard.bat
 ```
 
-Status colours: green = Normal Tone, red = Wideband Noise or Frequency Sweep (shown as "jammer"), amber = UNKNOWN.
+Then open:
 
-### API (all local)
-- `GET  /api/status` - model facts, classes, dataset facts, hold-out accuracy from `signal_dataset.csv`
-- `POST /api/step` - body `{"type":0-3,"seed":1-100,"extra":0-100,"threshold":0.5-0.95,"history":[...]}`
-- `POST /api/classify` - body `{"features":[peak,bandwidth,flatness,rms],"threshold":0.8}`
+`http://127.0.0.1:5001`
 
-## 6. Things to know (please read before presenting)
+## 18.5 Dependency Responsibilities
 
-- **Unknown limit.** `ml_model.py` saved 70 %. The Unfamiliar Test Signal gets about 69-71 % from your forest, right at that limit,
-  so the dashboard starts at 80 %, where it is reliably UNKNOWN. To start at 70 % like `ml_model.py`:
-  `set GNSS_UNKNOWN_THRESHOLD=0.70` before `run_dashboard.bat`.
-- **UNKNOWN is a confidence rule,** not proof that a signal is new. A different unfamiliar signal can still get a high confidence.
-- **100 % accuracy** (the hold-out check in the footer, computed on `signal_dataset.csv`) is because your three known signals look very different.
-  It says nothing about real radio signals.
-- **Normal Tone** is treated as the "normal" class and the other two as "jammer" classes. That is a labelling choice of this demo.
-- A frame that is not a clean example of the training signals (for example a Normal Tone with a lot of extra noise) can be misclassified. That is a real limit of the model.
-- This package was tested on Linux with the exact package versions above, using a Flask test client and a scripted browser-like page test.
-  It has not been run on a Windows machine, so please run `run_selftest.bat` first.
-
-## 7. Troubleshooting
-
-| Problem | Fix |
+| Package | Purpose |
 |---|---|
-| "Python was not found" | Install Python 3.13, tick **Add python.exe to PATH**, run the .bat again |
-| Package install fails | Check the internet connection, run the .bat again (it resumes) |
-| "Could not load signal_model.joblib" | The installed scikit-learn differs from the one that saved the model. Delete the `.venv` folder and run again (it installs 1.9.1). If it still fails, run `retrain_model.bat` |
-| Page says BACKEND OFFLINE | The CMD window with the server was closed. Run `run_dashboard.bat` and reload |
-| Port 5000 is in use | `set GNSS_PORT=5001` then `run_dashboard.bat` |
-| Fonts look different | The design loads Google Fonts. Offline it falls back to default fonts |
-| Windows Firewall prompt | The server listens on 127.0.0.1 only (your own laptop). You can click Cancel |
+| Flask | Serves the local dashboard and API |
+| NumPy | Numeric arrays and signal calculations |
+| SciPy | Signal-processing calculations |
+| scikit-learn | Random Forest training and inference |
+| joblib | Loads saved model artifacts |
+| Matplotlib | Graphing for the separate signal simulator utility |
 
+The main dashboard uses browser-based rendering rather than Matplotlib for its interface.
 
----------------------------------------------------------------------
+---
 
-## 8. What is new in this version
+# 19. Testing and Validation
 
-**1. GNSS LINK panel is now live (simulated).** It used to be two sliders. Now `link_model.py` (server side)
-computes it from the simulator: signal type, Extra noise and Running/Stopped. The nav pad sets the clear-sky link
-(satellites in view, strength). Interference removes satellites and lowers strength/C/N0 gradually; Stopped shows NO SIGNAL.
-Same DEGRADED/CAUTION thresholds as before. It is an illustrative model, not a measurement.
+## 19.1 Main Self-Test
 
-**2. MODULATION CLASSIFIER (new third unit, separate from the jamming analyzer).** Own model
-(`modulation_model.joblib`), own data (`modulation_dataset.csv`), own metrics (`modulation_metrics.json`).
-Trained classes: AM, FM (analog) and ASK, FSK, BPSK, QPSK (digital). Controls on its LCD: SELECT / UP / DOWN / ENTER
-(Source, Variation, SNR, Reject limit, Status), FRZ, LOG, POWER. Rebuild it with `retrain_modulation.bat`.
-If the saved model was made by a different scikit-learn version, the server rebuilds it from the CSV automatically on start.
+The project provides:
 
-**3. AUDIO ALERTS (optional, OFF until you press SOUND).** Group "ALERT AUDIO" on the analyzer: SOUND on/off, MUTE (also cuts off
-a sound that is playing), TEST (plays the real alert sound at the current volume), VOL fader. Alerts: JAMMER, UNKNOWN SIGNAL, LINK DEGRADED
-(they apply to the jamming analyzer and its link, not to the modulation unit).
-- **The JAMMER alert plays your MP3**: `static/audio/jammer_alert.mp3` (1.6 s). To use another sound, replace that file and keep the name.
-  It is downloaded when the page opens and decoded on your first click, silence at the very start of the file is skipped, so it starts
-  immediately. If the file is missing, simple beeps are used instead. UNKNOWN / LINK DEGRADED still use short beeps.
-- **Instant:** the alert does not wait for the screen. The screen smooths the last 4 frames (stable, but it needs about 0.6 s to settle on a new
-  signal). The alert uses the single-frame decision from the server (`instant` in `/api/step`, same 80% rule, no history) and judges each frame the
-  moment it arrives. A jammer sounds on the first frame after the change; the badge on the screen follows about half a second later.
-- **Duplicate prevention:** a jammer needs 1 frame, UNKNOWN 2 (so the brief UNKNOWN while one signal changes into another stays silent),
-  LINK DEGRADED 5; one sound per event; it re-arms only after the state has cleared (3 normal frames); 8 s cool-down per kind; priority
-  jammer > unknown > degraded; two sounds never overlap. Sounds play only on a new frame (not while frozen, not while the analyzer is off).
-- Browsers only allow sound after a click, which is why SOUND (or TEST) must be pressed once.
+`run_selftest.bat`
 
-### Honest limits of the modulation classifier (synthetic signals only)
-- Hold-out accuracy 99.7% on simulated frames (SNR 0-30 dB). That says nothing about real radio signals.
-- At 0 dB SNR a single frame is often UNKNOWN (about 30%) instead of wrong. Confident wrong labels are rare.
-- UNKNOWN is a confidence rule. "Noise only" is rejected; **16-QAM is mostly rejected but sometimes labelled QPSK; a Chirp is labelled FM
-  (a chirp is a linear FM) and is NOT rejected.** Sources marked * on the LCD were never in the training set.
+The corresponding test script is:
 
-### New tests
-- `run_selftest.bat` now also checks the link model, the modulation classifier, the instant alert decision and the MP3 file, that your interference
-  model/data/code files are byte-identical to the originals (section 10), and (if Node.js is installed) the alert logic. It must end with `ALL CHECKS PASSED`.
-- `tests\browser_test.py` is OPTIONAL (needs Playwright). It clicks the real page, counts every sound with a fake audio object, decodes the real MP3
-  in a real browser and checks that the jammer alert fires on the first frame after a change.
-- The live signals use fresh random noise. Measured on 20,000 frames each: a Frequency Sweep frame is right but at only 74-77% confidence (so the 80% rule
-  says UNKNOWN) about 0.015% of the time, Wideband Noise 0.005%, Normal Tone 0%, and a WRONG class never happened. So the "always classified" self-test
-  checks tolerate one such borderline frame in 60 and still fail on any wrong class. If a check fails once, run `run_selftest.bat` again.
-- Not run on Windows: the `.bat` files were checked by reading and the same steps were run on Linux.
-#   g n s s _ d a s h b o a r d  
- 
+`tests/selftest.py`
+
+The documented test suite checks model loading, link-model behavior, modulation classification, alert-related behavior, required files, and other expected properties.
+
+The required successful outcome is:
+
+```text
+ALL CHECKS PASSED
+```
+
+The exact checks depend on the current implementation.
+
+## 19.2 Optional Tests
+
+### Alert Logic Test
+
+`tests/test_alert_gate.js`
+
+This test can run automatically when Node.js is installed.
+
+### Browser Test
+
+`tests/browser_test.py`
+
+This optional test uses Playwright to exercise the browser interface and verify selected audio behaviors.
+
+It requires Playwright and a suitable browser environment.
+
+## 19.3 Suggested Manual Test Cases
+
+| Test | Action | Expected area to verify |
+|---|---|---|
+| Startup | Run the launcher | Backend starts and dashboard opens |
+| Backend availability | Load the dashboard | Backend status is available |
+| Normal signal | Select Normal Tone | Normal-class prediction is displayed |
+| Noise scenario | Select Wideband Noise | Noise-class prediction or documented confidence rejection |
+| Sweep scenario | Select Frequency Sweep | Sweep prediction or documented confidence rejection |
+| Unfamiliar input | Select Unfamiliar Test Signal | Confidence threshold behavior |
+| Threshold change | Adjust the threshold | Accepted/rejected classification behavior changes when applicable |
+| Link controls | Adjust satellite and strength controls | Simulated link values update |
+| Modulation | Change modulation source | Separate modulation panel updates |
+| Audio disabled | Turn SOUND off | Alerts remain silent |
+| Audio enabled | Enable SOUND and trigger an event | Qualified alert behavior can be checked |
+| Freeze | Freeze the analyzer | Display and alert behavior follow the documented freeze rules |
+| Power off | Turn analyzer off | New analysis requests and alerts stop according to implementation |
+
+## 19.4 Windows Verification
+
+The supplied project description states that the project was tested on Linux with the specified package versions and a Flask test client.
+
+It has not been run on a Windows machine according to that description.
+
+Therefore, a successful Windows run and self-test remain necessary before presenting Windows execution as verified.
+
+---
+
+# 20. Performance Evaluation
+
+## 20.1 Jamming Classifier
+
+The supplied project specification reports 100% hold-out accuracy for the three known synthetic signal classes.
+
+The described classes have deliberately distinct synthetic characteristics. Consequently, very high accuracy on those examples is possible.
+
+It does not establish 100% accuracy on real-world GNSS signals.
+
+The specification also notes that additional noise can cause a Normal Tone input to be misclassified.
+
+## 20.2 Modulation Classifier
+
+The supplied specification reports 99.7% hold-out accuracy on simulated modulation examples over an SNR range of 0–30 dB.
+
+This result applies to the generated dataset and its assumptions.
+
+It does not establish the same performance on real radio signals, different receivers, unseen channel conditions, or hardware-acquired data.
+
+## 20.3 Metrics for Future Evaluation
+
+For a more complete evaluation, consider reporting:
+
+- Confusion matrix.
+- Per-class precision.
+- Per-class recall.
+- F1 score.
+- False-positive rate.
+- False-negative rate.
+- Rejection rate for `UNKNOWN`.
+- Performance across different noise levels.
+- Performance on independent datasets.
+- Runtime and inference latency.
+
+These are recommended additions, not claims that all are currently implemented.
+
+---
+
+# 21. Security and Reliability
+
+## 21.1 Local-Only Deployment
+
+The documented backend listens on `127.0.0.1`.
+
+This restricts the intended service to the local machine under the documented configuration.
+
+Do not expose the development server to the public internet without an appropriate deployment and security design.
+
+## 21.2 Input Validation
+
+The API should validate incoming numeric values, types, and request structure.
+
+The documented request ranges should be enforced by the implementation.
+
+## 21.3 Model Reliability
+
+The application should report model-loading errors clearly.
+
+If a model cannot be loaded because of a missing file or incompatible dependency version, use the documented retraining or environment-repair workflow.
+
+## 21.4 Simulation Transparency
+
+The interface and project reports should clearly distinguish:
+
+- Generated signal samples.
+- Simulated link indicators.
+- Model predictions.
+- Measured hardware data, if any is introduced in a future version.
+
+The current project uses synthetic data, so it must not imply that its displays represent live receiver measurements.
+
+---
+
+# 22. Limitations
+
+The following limitations are documented for this project.
+
+1. All signal samples are synthetic.
+2. All satellite and link readings are simulated.
+3. There is no physical GNSS receiver integration.
+4. The link model uses simplified illustrative rules.
+5. High synthetic test accuracy does not prove real-world accuracy.
+6. The `UNKNOWN` decision is based on a confidence threshold.
+7. An unfamiliar signal may receive a high probability for a known class.
+8. A known signal may be rejected because of low confidence.
+9. Additional noise can lead to incorrect jamming-demo classifications.
+10. A simulated 16-QAM input can sometimes be classified as QPSK.
+11. A chirp may be classified as FM.
+12. Windows execution requires verification on the target machine.
+13. The exact link and modulation API schemas must be confirmed against the implementation.
+
+These limitations should accompany demonstrations, presentations, and reports.
+
+---
+
+# 23. Future Enhancements
+
+The following are potential future improvements.
+
+## 23.1 Data and Signal Processing
+
+- Add reproducible signal-generation configurations.
+- Record simulator settings for each test.
+- Document the exact FFT and bandwidth calculation.
+- Support additional synthetic interference scenarios.
+- Add independent test datasets.
+
+## 23.2 Machine Learning
+
+- Evaluate per-class precision and recall.
+- Study false alarms and missed detections.
+- Test confidence thresholds across multiple noise conditions.
+- Add explicit model and dataset version metadata.
+- Compare models on independent data.
+
+## 23.3 Dashboard
+
+- Export analysis sessions as reports.
+- Add event history and timestamped logs.
+- Display model confidence separately from system status.
+- Clearly label every simulated measurement.
+- Add downloadable evaluation summaries.
+
+## 23.4 Validation
+
+- Expand automated API tests.
+- Run browser tests on Windows.
+- Verify dependency installation on a clean machine.
+- Test model loading after environment recreation.
+- Add repeatable regression tests for alerts and state changes.
+
+## 23.5 Real-World Research
+
+Before extending this demonstration into a real-world GNSS monitoring system, further work would be required, including:
+
+- Appropriate receiver or recorded signal data.
+- Representative radio-channel and receiver effects.
+- Independent test data.
+- Calibrated thresholds.
+- False-alarm and missed-detection evaluation.
+- Hardware and field validation.
+
+These improvements would require separate implementation and validation.
+
+---
+
+# 24. Glossary
+
+| Term | Meaning |
+|---|---|
+| GNSS | Global Navigation Satellite System |
+| Jamming | Interference that disrupts reception |
+| FFT | Fast Fourier Transform |
+| Spectrum | Representation of signal content across frequencies |
+| Bandwidth | Frequency range occupied under a specified measurement definition |
+| Spectral Flatness | Measure describing how evenly spectral power is distributed |
+| RMS | Root Mean Square amplitude |
+| Random Forest | Ensemble of decision trees used for classification |
+| C/N0 | Carrier-to-noise-density ratio, commonly used in GNSS receiver measurements |
+| SNR | Signal-to-noise ratio |
+| AM | Amplitude Modulation |
+| FM | Frequency Modulation |
+| ASK | Amplitude Shift Keying |
+| FSK | Frequency Shift Keying |
+| BPSK | Binary Phase Shift Keying |
+| QPSK | Quadrature Phase Shift Keying |
+| Model Artifact | A saved file containing a trained model |
+| Hold-out Dataset | Data reserved for evaluation rather than training |
+| Confidence Threshold | A cutoff applied to model prediction probabilities |
+| Synthetic Data | Artificially generated data rather than physical measurements |
+| API | Application Programming Interface |
+| JSON | JavaScript Object Notation, used here for API messages |
+
+---
+
+# 25. Conclusion
+
+The GNSS Jamming Detection Analyzer demonstrates an integrated software architecture combining a browser dashboard, a Python Flask backend, synthetic signal generation, feature extraction, Random Forest classification, a simulated GNSS link model, modulation recognition, and optional audio alerts.
+
+Its primary educational value is the demonstration of how user controls, numerical signal processing, machine-learning inference, backend APIs, and visualization can work together in a single application.
+
+The two machine-learning models operate independently, while the simulated GNSS link provides a separate illustrative representation of changing link conditions.
+
+The system should be described accurately as a **simulation-based GNSS signal-analysis demonstration**. Its reported accuracy values apply to synthetic test data, and the current implementation has not been validated as a real-world GNSS jamming detector.
+
+---
+
+## Documentation Basis
+
+This document is based on the supplied `GNSS Jamming Detection Analyzer` project specification. It describes the documented file structure, components, workflows, API examples, thresholds, test procedures, and limitations.
+
+Where the supplied specification does not define an exact implementation detail, such as the full schema of a link or modulation endpoint, that detail must be confirmed from the corresponding source code before this document is treated as a formal implementation contract.
