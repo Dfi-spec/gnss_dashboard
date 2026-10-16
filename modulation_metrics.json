@@ -1,0 +1,102 @@
+{
+  "classes": [
+    "AM",
+    "ASK",
+    "BPSK",
+    "FM",
+    "FSK",
+    "QPSK"
+  ],
+  "train_rows": 3600,
+  "test_rows": 1200,
+  "snr_range_db": [
+    0.0,
+    30.0
+  ],
+  "holdout_accuracy": 0.9966666666666667,
+  "accuracy_by_snr": {
+    "0-5 dB": 0.9846153846153847,
+    "5-10 dB": 0.9949494949494949,
+    "10-20 dB": 1.0,
+    "20-30 dB": 1.0
+  },
+  "confusion_matrix": [
+    [
+      198,
+      2,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      1,
+      199,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      200,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      200,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      200,
+      0
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      0,
+      199
+    ]
+  ],
+  "unknown_threshold": 0.7,
+  "known_frames_accepted_at_threshold": 0.9875,
+  "unseen_types": {
+    "16-QAM (unseen)": {
+      "labelled_as": {
+        "QPSK": 148,
+        "BPSK": 1,
+        "ASK": 1
+      },
+      "mean_confidence": 0.6359333333333332,
+      "rejected_as_unknown": 0.8666666666666667
+    },
+    "Noise only (unseen)": {
+      "labelled_as": {
+        "FSK": 134,
+        "ASK": 16
+      },
+      "mean_confidence": 0.3453111111111111,
+      "rejected_as_unknown": 1.0
+    },
+    "Chirp (unseen)": {
+      "labelled_as": {
+        "FM": 150
+      },
+      "mean_confidence": 0.8583999999999999,
+      "rejected_as_unknown": 0.0
+    }
+  },
+  "note": "Synthetic signals only. Accuracy describes simulated frames, not real radio."
+}
