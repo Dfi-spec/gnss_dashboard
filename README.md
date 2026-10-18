@@ -1,4 +1,4 @@
-[![Watch the demo video](demo_thumbnail.jpg)](gnss_demo_full.mp4)
+[![Watch the demo video](demo_thumbnail.jpg)](https://github.com/Dfi-spec/gnss_dashboard/raw/main/gnss_demo_full.mp4)
 
 # GNSS Jamming Detection Analyzer
 
